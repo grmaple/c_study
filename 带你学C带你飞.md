@@ -125,7 +125,7 @@ int sum(int n, ...)
 
 #### 函数指针作为参数
 
-```
+```cpp
 int add(int, int);
 int sub(int, int);
 int calc(int (*fp)(int, int), int int);
@@ -134,15 +134,13 @@ calc(add, 3, 5);
 
 #### 函数指针作为返回值
 
-```
+```cpp
 int (*select(char op))(int, int);
 char op;
 int (*fp)(int)(int);
 fp = select(op);
 calc(fp, 3, 5);
 ```
-
-31
 
 ## 31局部变量和全局变量
 

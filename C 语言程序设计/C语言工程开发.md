@@ -192,7 +192,9 @@ int main(int argc, char **argv) {
     int i;
     printf("程序运行参数共 %d 个，分别是：\n", argc);
     for (i = 0; i < argc; i++) {
-    	printf("argv[%d]: %s\n", i, argv[i]);             }                                                     return 0;
+    	printf("argv[%d]: %s\n", i, argv[i]);
+    }
+    return 0;
 }
 ```
 
@@ -213,7 +215,7 @@ fp = fopen(文件路径，访问模式);//将文件指针和文件关联起来
 实现将一个文件复制到另一个文件内的函数
 
 ```c
-void filecopy(FIFE *in_fp, FIFE *out_fp) {
+void filecopy(FILE *in_fp, FILE *out_fp) {
     char ch;
     while ((ch = fgetc(in_fp)) != EOF) {
         fputc(ch, out_fp);
@@ -264,13 +266,13 @@ fclose(fp);
 stdin、stdout 其实也是被打开的文件指针，如果你觉得用不到的话，其实也是可以使用 fclose 将他们关闭掉的。
 
 ```c
-void filecopy(FIFE *in_fp, FIFE *out_fp) {
+void filecopy(FILE *in_fp, FILE *out_fp) {
     char ch;
     while ((ch = fgetc(in_fp)) != EOF) {
         fputc(ch, out_fp);
     }
 }
-void filecopy2(FIFE *in_fp, FIFE *out_fp) {
+void filecopy2(FILE *in_fp, FILE *out_fp) {
     char ch;
     while (fscanf(in_fp, "%c", &ch) != EOF) {
         fprintf(out_fp, "%c", ch);
@@ -278,8 +280,8 @@ void filecopy2(FIFE *in_fp, FIFE *out_fp) {
 }
 int main() {
     FILE *in_fp, *out_fp;
-	in_fp = fopen(文件路径，"r");
-    out_fp = fopen(文件路径，"w");
+	in_fp = fopen(文件路径, "r");
+    out_fp = fopen(文件路径, "w");
     filecopy(in_fp, out_fp);
     fclose(in_fp);
     fclose(out_fp);
@@ -291,41 +293,251 @@ int main() {
 实现一个我们起名为ncat的命令，其作用是把输入的内容每行前加上行号输出。它可能有 2个、 3 个或 4 个命令行参数，第一个命令行参数是它本身的名字，在这节里我们可以忽略，第二个参数一定是-d（表示 decimal）或者-r（表示 roman）中的一个，若为-d则行号用阿拉伯数字表示，若为-r则行号用罗马数字表示，若存在第三个参数则其表示输入文件的路径，若不存在则表示输入来自标准输入，若存在第四个参数则其表示输出文件的路径，若不存在则表示输出到标准输出。注意：行号与输入文本的回显之间用\t隔开。
 
 ```c
-int main(int argc, char *argv[]){
-    char *optstr = "p:n:m:c:";
-    struct option opts[] = {
-        {"path", 1, NULL, 'p'},
-        {"name", 1, NULL, 'n'},
-        {"mtime", 1, NULL, 'm'},
-        {"ctime", 1, NULL, 'c'},
-        {0, 0, 0, 0},
-    };
-    int opt;
-    while((opt = getopt_long(argc, argv, optstr, opts, NULL)) != -1){
-        switch(opt) {
-            case 'p':
-                strcpy(path, optarg);
-                break;
-            case 'n':
-                strcpy(targetname, optarg);
-                break;
-            case 'm':
-                modifiedtime = atoi(optarg);
-                break;
-            case 'c':
-                changetime = atoi(optarg);
-                break;
-            case '?':
-                if(strchr(optstr, optopt) == NULL){
-                    fprintf(stderr, "unknown option '-%c'\n", optopt);
-                }else{
-                    fprintf(stderr, "option requires an argument '-%c'\n", optopt);
-                }
-                return 1;
+#include <stdio.h>
+#include <string.h>
+#include "roman.h"
+int main(int argc, char *argv[]) { 
+    if (argc == 2) {//标准输入输出
+        if (strcmp(argv[1], "-d") == 0) {//行号用阿拉伯数字表示
+            char c;
+            char buf[50][100];
+            int i = 0;
+            int j = 0;
+            while (fscanf(stdin, "%c", &c) != EOF) {
+                if (c != '\n') {
+                    buf[j][i++] = c;
+                } else {
+                    buf[j][i] = '\0';
+                    i = 0;
+        	        j++;
+                }              
+            }
+            for (int k = 0; k < j; k++) {
+                int n = k + 1;
+                fprintf(stdout, "%d\t%s\n", n, buf[k]);         
+            }
+        } else if (strcmp(argv[1], "-r") == 0) {//行号用罗马数字表示
+            char c;
+            char buf[50][100];
+            int i = 0;
+            int j = 0;
+            while (fscanf(stdin, "%c", &c) != EOF) {
+                if (c != '\n') {
+                    buf[j][i++] = c;
+                } else {
+                    buf[j][i] = '\0';
+                    i = 0;
+        	        j++;
+                }              
+            }
+            for (int k = 0; k < j; k++) {
+                char* n;
+                n = to_roman_numeral(n, k+1);
+                fprintf(stdout, "%s\t%s\n", n, buf[k]);         
+            }
+        }
+    } else if (argc == 3) {//文件输入，标准输出
+        FILE *in_fp;
+        in_fp = fopen(argv[2], "r");
+        if (strcmp(argv[1], "-d") == 0) {//行号用阿拉伯数字表示
+            char c;
+            char buf[50][100];
+            int i = 0;
+            int j = 0;
+            while (fscanf(in_fp, "%c", &c) != EOF) {
+                if (c != '\n') {
+                    buf[j][i++] = c;
+                } else {
+                    buf[j][i] = '\0';
+                    i = 0;
+        	        j++;
+                }              
+            }
+            for (int k = 0; k < j; k++) {
+                int n = k + 1;
+                fprintf(stdout, "%d\t%s\n", n, buf[k]);         
+            }
+        } else if (strcmp(argv[1], "-r") == 0) {//行号用罗马数字表示
+            char c;
+            char buf[50][100];
+            int i = 0;
+            int j = 0;
+            while (fscanf(in_fp, "%c", &c) != EOF) {
+                if (c != '\n') {
+                    buf[j][i++] = c;
+                } else {
+                    buf[j][i] = '\0';
+                    i = 0;
+        	        j++;
+                }              
+            }
+            for (int k = 0; k < j; k++) {
+                char* n;
+                n = to_roman_numeral(n, k+1);
+                fprintf(stdout, "%s\t%s\n", n, buf[k]);         
+            }
+        }
+    } else if (argc == 4) {//文件输入输出
+        FILE *in_fp, *out_fp;
+        in_fp = fopen(argv[2], "r");
+        out_fp = fopen(argv[3], "w");
+        if (strcmp(argv[1], "-d") == 0) {//行号用阿拉伯数字表示
+            char c;
+            char buf[50][100];
+            int i = 0;
+            int j = 0;
+            while (fscanf(in_fp, "%c", &c) != EOF) {
+                if (c != '\n') {
+                    buf[j][i++] = c;
+                } else {
+                    buf[j][i] = '\0';
+                    i = 0;
+        	        j++;
+                }              
+            }
+            for (int k = 0; k < j; k++) {
+                int n = k + 1;
+                fprintf(out_fp, "%d\t%s\n", n, buf[k]);         
+            }
+        } else if (strcmp(argv[1], "-r") == 0) {//行号用罗马数字表示
+            char c;
+            char buf[50][100];
+            int i = 0;
+            int j = 0;
+            while (fscanf(in_fp, "%c", &c) != EOF) {
+                if (c != '\n') {
+                    buf[j][i++] = c;
+                } else {
+                    buf[j][i] = '\0';
+                    i = 0;
+        	        j++;
+                }              
+            }
+            for (int k = 0; k < j; k++) {
+                char* n;
+                n = to_roman_numeral(n, k+1);
+                fprintf(out_fp, "%s\t%s\n", n, buf[k]);         
+            }
         }
     }
-    findInDir(path);
     return 0;
 }
 ```
+
+```makefile
+CC = gcc
+CFLAGS = -std=c99 -Wall -Werror
+MAINOBJS = ncat.o roman.o
+ncat: $(MAINOBJS)
+	$(CC) $(CFLAGS) -o ncat $(MAINOBJS)
+ncat.o: ncat.c roman.h
+	$(CC) $(CFLAGS) -c -o ncat.o ncat.c
+roman.o: roman.c roman.h
+	$(CC) $(CFLAGS) -c -o roman.o roman.c
+clean:
+	$(RM) -- *.o ncat
+
+```
+
+```c
+#include "roman.h"
+
+static const char *symbol[] = { "I", "V", "X", "L", "C", "D", "M",
+                                "-V", "-X", "-L", "-C", "-D", "-M",
+                                "=V", "=X", "=L", "=C", "=D", "=M" };
+
+static char* addsymbol(char* dst, int index)
+{
+	for (int i = 0; *(symbol[index] + i) != '\0'; i++) {
+		*(dst++) = *(symbol[index] + i);
+	}
+	return dst;
+}
+
+static char* _roman(char* dst, int src, int index)
+{
+	if (src != 0) {
+		dst = _roman(dst, src / 10, index + 1);
+		src %= 10;
+		if (src >= 9) {
+			dst = addsymbol(dst, index * 2);
+			dst = addsymbol(dst, index * 2 + 2);
+			src -= 9;
+		}
+		if (src >= 5) {
+			dst = addsymbol(dst, index * 2 + 1);
+			src -= 5;
+		}
+		if (src >= 4) {
+			dst = addsymbol(dst, index * 2);
+			dst = addsymbol(dst, index * 2 + 1);
+			src -= 4;
+		}
+		while (src > 0) {
+			dst = addsymbol(dst, index * 2);
+			src--;
+		}
+	}
+	return dst;
+}
+
+char* to_roman_numeral(char* dst, int src)
+{
+	*(_roman(dst, src, 0)) = '\0';
+	return dst;
+}
+
+```
+
+### 调试代码
+
+gdb
+
+在编译时使用-g作为一个编译参数(否则你将看不到函数名，变量名，而只能看到运行时的内存地址)
+
+gcc -o program -g main.c
+
+然后我们通过
+
+gdb ./program
+
+将程序在gdb提供的一个受控制的环境中运行起来
+
+l	gdb会列出带着行号的10行程序，l之后加行号作为参数，列出这一行开始的10行
+
+b	设置程序运行的断点，程序运行到断点时就会暂停运行，b之后既可以加函数名作为参数，使程序在调用某一函数时暂停，也可以加行号作为参数，使程序在运行某一行时暂停。
+
+r	程序会开始运行，并且暂停在断点位置
+
+运行暂停时
+
+​	p 表达式	表示我们希望在当前断点运行这个表达式并查看他的值，例如 p ++age[0]表示我们希望让age[0]+1并查看之后的值，注意这个表达式会对之后的程序继续运行造成影响。
+
+​	n	程序会执行暂停位置后的下一条语句并再次暂停。
+
+​	c	程序会继续执行到下一断点再暂停。
+
+### 简易OJ
+
+首先用gdb调试并修正一个关于判断三角形的程序。然后编写一个简单的 OJ 核心判断这个程序或者其它一个仅操作于标准输入输出的程序是否正确。
+
+```makefile
+CC = gcc
+CFLAGS = -std=c99 -g -Wall -Wextra
+
+OBJS = oj.o run.o
+
+.PHONY: clean
+
+oj: $(OBJS)
+	$(CC) $(CFLAGS) -o oj $(OBJS)
+oj.o: oj.c run.h
+	$(CC) $(CFLAGS) -c -o oj.o oj.c
+run.o: run.c run.h
+	$(CC) $(CFLAGS) -c -o run.o run.c 
+clean:
+	$(RM) -- $(OBJS) oj 
+```
+
+
 
